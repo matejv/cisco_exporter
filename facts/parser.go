@@ -15,7 +15,7 @@ func (c *factsCollector) ParseVersion(ostype string, output string) (VersionFact
 		return VersionFact{}, errors.New("'show version' is not implemented for " + ostype)
 	}
 	versionRegexp := make(map[string]*regexp.Regexp)
-	versionRegexp[rpc.IOSXE], _ = regexp.Compile(`^.*, Version (.+) -.*$`)
+	versionRegexp[rpc.IOSXE], _ = regexp.Compile(`^Cisco IOS XE Software, Version (.+)$`)
 	versionRegexp[rpc.IOS], _ = regexp.Compile(`^.*, Version (.+),.*$`)
 	versionRegexp[rpc.NXOS], _ = regexp.Compile(`^\s+NXOS: version (.*)$`)
 
