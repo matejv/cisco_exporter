@@ -79,7 +79,7 @@ func (c *neighborsCollector) ParseIPv4Neighbors(ostype string, output string, da
 func (c *neighborsCollector) ParseIPv6Neighbors(ostype string, output string, data map[string]*InterfaceNeighors) error {
 	// IPv6 Address                              Age Link-layer Addr State Interface
 	// FE80::AD79:7159:3AB9:D52F                   0 aaaa.6cd6.0e6f  STALE Vl65
-	ipv6NeighborRegexp, _ := regexp.Compile(`^[a-zA-Z0-9\:]+\s+[\d\-]+\s+[a-zA-Z0-9\.]+\s+(\w+)\s+(\S+)`)
+	ipv6NeighborRegexp, _ := regexp.Compile(`^[a-zA-Z0-9\:]+\s+[\d\-]+\s+[a-zA-Z0-9\.\-]+\s+(\w+)\s+(\S+)`)
 	lines := strings.Split(output, "\n")
 
 	for _, line := range lines {
@@ -95,7 +95,7 @@ func (c *neighborsCollector) ParseIPv6Neighbors(ostype string, output string, da
 		if !ok {
 			return errors.New(fmt.Sprintf("Interface %s found in ipv6 neighbors but not 'show ipv6 interface brief' command", matches[2]))
 		}
-		if matches[1] == "INCOM" {
+		if matches[1] == "INCMP" {
 			interface_neigbors.Incomplete++
 		} else if matches[1] == "REACH" {
 			interface_neigbors.Reachable++
