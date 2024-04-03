@@ -30,7 +30,7 @@ func (c *interfaceCollector) Parse(ostype string, output string) ([]Interface, e
 	outputBytesRegexp := regexp.MustCompile(`^\s+\d+ (?:packets output,|output packets)\s+(\d+) bytes.*$`)
 	inputErrorsRegexp := regexp.MustCompile(`^\s+(\d+) input error(?:s,)? .*$`)
 	outputErrorsRegexp := regexp.MustCompile(`^\s+(\d+) output error(?:s,)? .*$`)
-	speedRegexp := regexp.MustCompile(`^\s+(.*)-duplex,\s(\d+) ((\wb)/s).*$`)
+	speedRegexp := regexp.MustCompile(`^\s+MTU\s.+BW\s(\d+)\s?Kbit.+$`)
 
 	isRx := true
 	current := Interface{}
@@ -83,7 +83,7 @@ func (c *interfaceCollector) Parse(ostype string, output string) ([]Interface, e
 		} else if matches := outputErrorsRegexp.FindStringSubmatch(line); matches != nil {
 			current.OutputErrors = util.Str2float64(matches[1])
 		} else if matches := speedRegexp.FindStringSubmatch(line); matches != nil {
-			current.Speed = matches[2] + " " + matches[3]
+			current.Speed = util.Str2float64(matches[1]) * 1000
 		} else if matches := txNXOS.FindStringSubmatch(line); matches != nil {
 			isRx = false
 		} else if matches := multiBroadNXOS.FindStringSubmatch(line); matches != nil {
