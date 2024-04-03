@@ -39,6 +39,8 @@ func (c *Client) Identify() error {
 	switch {
 	case strings.Contains(output, "IOS XE"):
 		c.OSType = IOSXE
+	case strings.Contains(output, "IOS-XE"):
+		c.OSType = IOSXE
 	case strings.Contains(output, "NX-OS"):
 		c.OSType = NXOS
 	case strings.Contains(output, "IOS Software"):
