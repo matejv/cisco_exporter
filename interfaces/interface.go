@@ -20,5 +20,5 @@ type Interface struct {
 	InputBroadcast float64
 	InputMulticast float64
 
-	Speed string
+	Speed float64
 }

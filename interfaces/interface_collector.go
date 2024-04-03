@@ -12,21 +12,22 @@ import (
 const prefix string = "cisco_interface_"
 
 var (
-	receiveBytesDesc       *prometheus.Desc
-	receiveErrorsDesc      *prometheus.Desc
-	receiveDropsDesc       *prometheus.Desc
-	receiveBroadcastDesc   *prometheus.Desc
-	receiveMulticastDesc   *prometheus.Desc
-	transmitBytesDesc      *prometheus.Desc
-	transmitErrorsDesc     *prometheus.Desc
-	transmitDropsDesc      *prometheus.Desc
-	adminStatusDesc        *prometheus.Desc
-	operStatusDesc         *prometheus.Desc
-	errorStatusDesc        *prometheus.Desc
+	receiveBytesDesc     *prometheus.Desc
+	receiveErrorsDesc    *prometheus.Desc
+	receiveDropsDesc     *prometheus.Desc
+	receiveBroadcastDesc *prometheus.Desc
+	receiveMulticastDesc *prometheus.Desc
+	transmitBytesDesc    *prometheus.Desc
+	transmitErrorsDesc   *prometheus.Desc
+	transmitDropsDesc    *prometheus.Desc
+	adminStatusDesc      *prometheus.Desc
+	operStatusDesc       *prometheus.Desc
+	errorStatusDesc      *prometheus.Desc
+	speedDesc            *prometheus.Desc
 )
 
 func init() {
-	l := []string{"target", "name", "description", "mac", "speed"}
+	l := []string{"target", "name", "description", "mac"}
 	receiveBytesDesc = prometheus.NewDesc(prefix+"receive_bytes", "Received data in bytes", l, nil)
 	receiveErrorsDesc = prometheus.NewDesc(prefix+"receive_errors", "Number of errors caused by incoming packets", l, nil)
 	receiveDropsDesc = prometheus.NewDesc(prefix+"receive_drops", "Number of dropped incoming packets", l, nil)
@@ -38,6 +39,7 @@ func init() {
 	adminStatusDesc = prometheus.NewDesc(prefix+"admin_up", "Admin operational status", l, nil)
 	operStatusDesc = prometheus.NewDesc(prefix+"up", "Interface operational status", l, nil)
 	errorStatusDesc = prometheus.NewDesc(prefix+"error_status", "Admin and operational status differ", l, nil)
+	speedDesc = prometheus.NewDesc(prefix+"speed", "Interface speed in in bps", l, nil)
 }
 
 type interfaceCollector struct {
@@ -66,6 +68,7 @@ func (*interfaceCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- adminStatusDesc
 	ch <- operStatusDesc
 	ch <- errorStatusDesc
+	ch <- speedDesc
 }
 
 // Collect collects metrics from Cisco
@@ -105,7 +108,7 @@ func (c *interfaceCollector) Collect(client *rpc.Client, ch chan<- prometheus.Me
 	}
 
 	for _, item := range items {
-		l := append(labelValues, item.Name, item.Description, item.MacAddress, item.Speed)
+		l := append(labelValues, item.Name, item.Description, item.MacAddress)
 
 		errorStatus := 0
 		if item.AdminStatus != item.OperStatus {
@@ -130,6 +133,7 @@ func (c *interfaceCollector) Collect(client *rpc.Client, ch chan<- prometheus.Me
 		ch <- prometheus.MustNewConstMetric(adminStatusDesc, prometheus.GaugeValue, float64(adminStatus), l...)
 		ch <- prometheus.MustNewConstMetric(operStatusDesc, prometheus.GaugeValue, float64(operStatus), l...)
 		ch <- prometheus.MustNewConstMetric(errorStatusDesc, prometheus.GaugeValue, float64(errorStatus), l...)
+		ch <- prometheus.MustNewConstMetric(speedDesc, prometheus.GaugeValue, item.Speed, l...)
 	}
 
 	return nil
