@@ -19,7 +19,7 @@ func (c *interfaceCollector) Parse(ostype string, output string) ([]Interface, e
 	newIfRegexp := regexp.MustCompile(`(?:^!?(?: |admin|show|.+#).*$|^$)`)
 	macRegexp := regexp.MustCompile(`^\s+Hardware(?: is|:) .+, address(?: is|:) (.*) \(.*\)$`)
 	deviceNameRegexp := regexp.MustCompile(`^([a-zA-Z0-9\/\.-]+) is.*$`)
-	adminStatusRegexp := regexp.MustCompile(`^.+ is (administratively)?\s*(up|down).*, line protocol is.*$`)
+	adminStatusRegexp := regexp.MustCompile(`^.+ is (administratively)?\s*(up|down).*, line protocol is\s+(up|down).*$`)
 	adminStatusNXOSRegexp := regexp.MustCompile(`^\S+ is (up|down)(?:\s|,)?(\(Administratively down\))?.*$`)
 	descRegexp := regexp.MustCompile(`^\s+Description: (.*)$`)
 	dropsRegexp := regexp.MustCompile(`^\s+Input queue: \d+\/\d+\/(\d+)\/\d+ .+ Total output drops: (\d+)$`)
@@ -59,7 +59,11 @@ func (c *interfaceCollector) Parse(ostype string, output string) ([]Interface, e
 			} else {
 				current.AdminStatus = "down"
 			}
-			current.OperStatus = matches[2]
+			if matches[2] == "up" && matches[3] == "up" {
+				current.OperStatus = "up"
+			} else {
+				current.OperStatus = "down"
+			}
 		} else if matches := adminStatusNXOSRegexp.FindStringSubmatch(line); matches != nil {
 			if matches[2] == "" {
 				current.AdminStatus = "up"
