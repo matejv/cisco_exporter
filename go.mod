@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
-	github.com/sirikothe/gotextfsm v1.0.0
+	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
