@@ -163,27 +163,17 @@ func (c *opticsCollector) Collect(client *rpc.Client, ch chan<- prometheus.Metri
 		}
 
 	case rpc.NXOS:
-		iflistcmd := "show interface status | exclude disabled | exclude notconn | exclude sfpAbsent | exclude --------------------------------------------------------------------------------"
-		out, err := client.RunCommand(iflistcmd)
-
-		if err != nil {
-			return err
-		}
-		interfaces, err := c.ParseInterfaces(client.OSType, out)
+		//iflistcmd := "show interface status | exclude disabled | exclude notconn | exclude sfpAbsent | exclude --------------------------------------------------------------------------------"
+		interfaces, err := client.GetInterfaceNames(false)
 		if err != nil {
 			if client.Debug {
-				log.Printf("ParseInterfaces for %s: %s\n", labelValues[0], err.Error())
+				log.Printf("GetInterfaceNames for %s: %s\n", labelValues[0], err.Error())
 			}
 			return nil
 		}
 
 		for _, i := range interfaces {
-			switch client.OSType {
-			case rpc.IOS, rpc.IOSXE:
-				out, err = client.RunCommand("show interfaces " + i + " transceiver")
-			case rpc.NXOS:
-				out, err = client.RunCommand("show interface " + i + " transceiver details")
-			}
+			out, err := client.RunCommand("show interface " + i + " transceiver details")
 			if err != nil {
 				if client.Debug {
 					log.Printf("Transceiver command on %s: %s\n", labelValues[0], err.Error())
