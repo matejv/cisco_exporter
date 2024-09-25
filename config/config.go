@@ -44,6 +44,7 @@ type FeatureConfig struct {
 	Interfaces  *bool `yaml:"interfaces,omitempty"`
 	Neighbors   *bool `yaml:"neighbors,omitempty"`
 	Optics      *bool `yaml:"optics,omitempty"`
+	Inventory   *bool `yaml:"inventory,omitempty"`
 }
 
 // New creates a new config
@@ -98,6 +99,9 @@ func Load(reader io.Reader) (*Config, error) {
 		if d.Features.Optics == nil {
 			d.Features.Optics = c.Features.Optics
 		}
+		if d.Features.Inventory == nil {
+			d.Features.Inventory = c.Features.Inventory
+		}
 	}
 
 	return c, nil
@@ -122,6 +126,8 @@ func (c *Config) setDefaultValues() {
 	f.Neighbors = &neighbors
 	optics := true
 	f.Optics = &optics
+	inventory := true
+	f.Inventory = &inventory
 }
 
 // DevicesFromTargets creates devices configs from targets list

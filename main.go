@@ -35,6 +35,7 @@ var (
 	neighborsEnabled   = flag.Bool("neighbors.enabled", false, "Scrape neighbor counts (ARP & IPv6 ND table size)")
 	interfacesEnabled  = flag.Bool("interfaces.enabled", true, "Scrape interface metrics")
 	opticsEnabled      = flag.Bool("optics.enabled", true, "Scrape optic metrics")
+	inventoryEnabled   = flag.Bool("inventory.enabled", true, "Scrape hardware inventory")
 	configFile         = flag.String("config.file", "", "Path to config file")
 	devices            []*connector.Device
 	cfg                *config.Config
@@ -115,6 +116,7 @@ func loadConfigFromFlags() *config.Config {
 	f.Interfaces = interfacesEnabled
 	f.Neighbors = neighborsEnabled
 	f.Optics = opticsEnabled
+	f.Inventory = inventoryEnabled
 
 	return c
 }
