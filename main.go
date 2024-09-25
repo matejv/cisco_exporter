@@ -34,10 +34,13 @@ var (
 	neighborsEnabled   = flag.Bool("neighbors.enabled", false, "Scrape neighbor counts (ARP & IPv6 ND table size)")
 	interfacesEnabled  = flag.Bool("interfaces.enabled", true, "Scrape interface metrics")
 	opticsEnabled      = flag.Bool("optics.enabled", true, "Scrape optic metrics")
-	inventoryEnabled   = flag.Bool("inventory.enabled", true, "Scrape hardware inventory")
+	inventoryEnabled   = flag.Bool("inventory.enabled", false, "Scrape hardware inventory")
 	configFile         = flag.String("config.file", "", "Path to config file")
-	devices            []*connector.Device
-	cfg                *config.Config
+	dynamicIfaceLabels = flag.Bool("dynamic-interface-labels", true, "Parse interface and BGP descriptions to get labels dynamically")
+	descriptionRegex   = flag.String("description-regex", "", "Give a regex to retrieve description labels")
+
+	devices []*connector.Device
+	cfg     *config.Config
 )
 
 func init() {
@@ -105,6 +108,8 @@ func loadConfigFromFlags() *config.Config {
 	c.Password = *sshPassword
 
 	c.KeyFile = *sshKeyFile
+	c.IfDescRegStr = *descriptionRegex
+	c.DynamicLabels = *dynamicIfaceLabels
 
 	c.DevicesFromTargets(*sshHosts)
 

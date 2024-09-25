@@ -1,6 +1,8 @@
 package main
 
 import (
+	"regexp"
+
 	"github.com/lwlcom/cisco_exporter/bgp"
 	"github.com/lwlcom/cisco_exporter/collector"
 	"github.com/lwlcom/cisco_exporter/config"
@@ -27,20 +29,22 @@ func collectorsForDevices(devices []*connector.Device, cfg *config.Config) *coll
 	}
 
 	for _, d := range devices {
-		c.initCollectorsForDevice(d)
+		c.initCollectorsForDevice(d, deviceInterfaceRegex(cfg, d.Host))
 	}
 
 	return c
 }
 
-func (c *collectors) initCollectorsForDevice(device *connector.Device) {
+func (c *collectors) initCollectorsForDevice(device *connector.Device, descRe *regexp.Regexp) {
 	f := c.cfg.FeaturesForDevice(device.Host)
 
 	c.devices[device.Host] = make([]collector.RPCCollector, 0)
 	c.addCollectorIfEnabledForDevice(device, "bgp", f.BGP, bgp.NewCollector)
 	c.addCollectorIfEnabledForDevice(device, "environment", f.Environment, environment.NewCollector)
 	c.addCollectorIfEnabledForDevice(device, "facts", f.Facts, facts.NewCollector)
-	c.addCollectorIfEnabledForDevice(device, "interfaces", f.Interfaces, interfaces.NewCollector)
+	c.addCollectorIfEnabledForDevice(device, "interfaces", f.Interfaces, func() collector.RPCCollector {
+		return interfaces.NewCollector(descRe)
+	})
 	c.addCollectorIfEnabledForDevice(device, "neighbors", f.Neighbors, neighbors.NewCollector)
 	c.addCollectorIfEnabledForDevice(device, "optics", f.Optics, optics.NewCollector)
 	c.addCollectorIfEnabledForDevice(device, "inventory", f.Inventory, inventory.NewCollector)

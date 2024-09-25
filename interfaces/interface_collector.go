@@ -2,7 +2,9 @@ package interfaces
 
 import (
 	"log"
+	"regexp"
 
+	"github.com/lwlcom/cisco_exporter/dynamiclabels"
 	"github.com/lwlcom/cisco_exporter/rpc"
 
 	"github.com/lwlcom/cisco_exporter/collector"
@@ -11,7 +13,7 @@ import (
 
 const prefix string = "cisco_interface_"
 
-var (
+type description struct {
 	receiveBytesDesc     *prometheus.Desc
 	receiveErrorsDesc    *prometheus.Desc
 	receiveDropsDesc     *prometheus.Desc
@@ -24,30 +26,35 @@ var (
 	operStatusDesc       *prometheus.Desc
 	errorStatusDesc      *prometheus.Desc
 	speedDesc            *prometheus.Desc
-)
+}
 
-func init() {
+func newDescriptions(dynLabels dynamiclabels.Labels) *description {
+	d := &description{}
 	l := []string{"target", "name", "description", "mac"}
-	receiveBytesDesc = prometheus.NewDesc(prefix+"receive_bytes", "Received data in bytes", l, nil)
-	receiveErrorsDesc = prometheus.NewDesc(prefix+"receive_errors", "Number of errors caused by incoming packets", l, nil)
-	receiveDropsDesc = prometheus.NewDesc(prefix+"receive_drops", "Number of dropped incoming packets", l, nil)
-	receiveBroadcastDesc = prometheus.NewDesc(prefix+"receive_broadcast", "Received broadcast packets", l, nil)
-	receiveMulticastDesc = prometheus.NewDesc(prefix+"receive_multicast", "Received multicast packets", l, nil)
-	transmitBytesDesc = prometheus.NewDesc(prefix+"transmit_bytes", "Transmitted data in bytes", l, nil)
-	transmitErrorsDesc = prometheus.NewDesc(prefix+"transmit_errors", "Number of errors caused by outgoing packets", l, nil)
-	transmitDropsDesc = prometheus.NewDesc(prefix+"transmit_drops", "Number of dropped outgoing packets", l, nil)
-	adminStatusDesc = prometheus.NewDesc(prefix+"admin_up", "Admin operational status", l, nil)
-	operStatusDesc = prometheus.NewDesc(prefix+"up", "Interface operational status", l, nil)
-	errorStatusDesc = prometheus.NewDesc(prefix+"error_status", "Admin and operational status differ", l, nil)
-	speedDesc = prometheus.NewDesc(prefix+"speed", "Interface speed in in bps", l, nil)
+	l = append(l, dynLabels.Keys()...)
+
+	d.receiveBytesDesc = prometheus.NewDesc(prefix+"receive_bytes", "Received data in bytes", l, nil)
+	d.receiveErrorsDesc = prometheus.NewDesc(prefix+"receive_errors", "Number of errors caused by incoming packets", l, nil)
+	d.receiveDropsDesc = prometheus.NewDesc(prefix+"receive_drops", "Number of dropped incoming packets", l, nil)
+	d.receiveBroadcastDesc = prometheus.NewDesc(prefix+"receive_broadcast", "Received broadcast packets", l, nil)
+	d.receiveMulticastDesc = prometheus.NewDesc(prefix+"receive_multicast", "Received multicast packets", l, nil)
+	d.transmitBytesDesc = prometheus.NewDesc(prefix+"transmit_bytes", "Transmitted data in bytes", l, nil)
+	d.transmitErrorsDesc = prometheus.NewDesc(prefix+"transmit_errors", "Number of errors caused by outgoing packets", l, nil)
+	d.transmitDropsDesc = prometheus.NewDesc(prefix+"transmit_drops", "Number of dropped outgoing packets", l, nil)
+	d.adminStatusDesc = prometheus.NewDesc(prefix+"admin_up", "Admin operational status", l, nil)
+	d.operStatusDesc = prometheus.NewDesc(prefix+"up", "Interface operational status", l, nil)
+	d.errorStatusDesc = prometheus.NewDesc(prefix+"error_status", "Admin and operational status differ", l, nil)
+	d.speedDesc = prometheus.NewDesc(prefix+"speed", "Interface speed in in bps", l, nil)
+	return d
 }
 
 type interfaceCollector struct {
+	descriptionRe *regexp.Regexp
 }
 
 // NewCollector creates a new collector
-func NewCollector() collector.RPCCollector {
-	return &interfaceCollector{}
+func NewCollector(descRe *regexp.Regexp) collector.RPCCollector {
+	return &interfaceCollector{descriptionRe: descRe}
 }
 
 // Name returns the name of the collector
@@ -57,18 +64,19 @@ func (*interfaceCollector) Name() string {
 
 // Describe describes the metrics
 func (*interfaceCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- receiveBytesDesc
-	ch <- receiveErrorsDesc
-	ch <- receiveDropsDesc
-	ch <- receiveBroadcastDesc
-	ch <- receiveMulticastDesc
-	ch <- transmitBytesDesc
-	ch <- transmitDropsDesc
-	ch <- transmitErrorsDesc
-	ch <- adminStatusDesc
-	ch <- operStatusDesc
-	ch <- errorStatusDesc
-	ch <- speedDesc
+	d := newDescriptions(nil)
+	ch <- d.receiveBytesDesc
+	ch <- d.receiveErrorsDesc
+	ch <- d.receiveDropsDesc
+	ch <- d.receiveBroadcastDesc
+	ch <- d.receiveMulticastDesc
+	ch <- d.transmitBytesDesc
+	ch <- d.transmitDropsDesc
+	ch <- d.transmitErrorsDesc
+	ch <- d.adminStatusDesc
+	ch <- d.operStatusDesc
+	ch <- d.errorStatusDesc
+	ch <- d.speedDesc
 }
 
 // Collect collects metrics from Cisco
@@ -108,33 +116,40 @@ func (c *interfaceCollector) Collect(client *rpc.Client, ch chan<- prometheus.Me
 	}
 
 	for _, item := range items {
-		l := append(labelValues, item.Name, item.Description, item.MacAddress)
-
-		errorStatus := 0
-		if item.AdminStatus != item.OperStatus {
-			errorStatus = 1
-		}
-		adminStatus := 0
-		if item.AdminStatus == "up" {
-			adminStatus = 1
-		}
-		operStatus := 0
-		if item.OperStatus == "up" {
-			operStatus = 1
-		}
-		ch <- prometheus.MustNewConstMetric(receiveBytesDesc, prometheus.GaugeValue, item.InputBytes, l...)
-		ch <- prometheus.MustNewConstMetric(receiveErrorsDesc, prometheus.GaugeValue, item.InputErrors, l...)
-		ch <- prometheus.MustNewConstMetric(receiveDropsDesc, prometheus.GaugeValue, item.InputDrops, l...)
-		ch <- prometheus.MustNewConstMetric(transmitBytesDesc, prometheus.GaugeValue, item.OutputBytes, l...)
-		ch <- prometheus.MustNewConstMetric(transmitErrorsDesc, prometheus.GaugeValue, item.OutputErrors, l...)
-		ch <- prometheus.MustNewConstMetric(transmitDropsDesc, prometheus.GaugeValue, item.OutputDrops, l...)
-		ch <- prometheus.MustNewConstMetric(receiveBroadcastDesc, prometheus.GaugeValue, item.InputBroadcast, l...)
-		ch <- prometheus.MustNewConstMetric(receiveMulticastDesc, prometheus.GaugeValue, item.InputMulticast, l...)
-		ch <- prometheus.MustNewConstMetric(adminStatusDesc, prometheus.GaugeValue, float64(adminStatus), l...)
-		ch <- prometheus.MustNewConstMetric(operStatusDesc, prometheus.GaugeValue, float64(operStatus), l...)
-		ch <- prometheus.MustNewConstMetric(errorStatusDesc, prometheus.GaugeValue, float64(errorStatus), l...)
-		ch <- prometheus.MustNewConstMetric(speedDesc, prometheus.GaugeValue, item.Speed, l...)
+		c.collectForInterface(item, ch, labelValues)
 	}
 
 	return nil
+}
+
+func (c *interfaceCollector) collectForInterface(item Interface, ch chan<- prometheus.Metric, labelValues []string) {
+	l := append(labelValues, item.Name, item.Description, item.MacAddress)
+	dynLabels := dynamiclabels.ParseDescription(item.Description, c.descriptionRe)
+	l = append(l, dynLabels.Values()...)
+	d := newDescriptions(dynLabels)
+
+	errorStatus := 0
+	if item.AdminStatus != item.OperStatus {
+		errorStatus = 1
+	}
+	adminStatus := 0
+	if item.AdminStatus == "up" {
+		adminStatus = 1
+	}
+	operStatus := 0
+	if item.OperStatus == "up" {
+		operStatus = 1
+	}
+	ch <- prometheus.MustNewConstMetric(d.receiveBytesDesc, prometheus.GaugeValue, item.InputBytes, l...)
+	ch <- prometheus.MustNewConstMetric(d.receiveErrorsDesc, prometheus.GaugeValue, item.InputErrors, l...)
+	ch <- prometheus.MustNewConstMetric(d.receiveDropsDesc, prometheus.GaugeValue, item.InputDrops, l...)
+	ch <- prometheus.MustNewConstMetric(d.transmitBytesDesc, prometheus.GaugeValue, item.OutputBytes, l...)
+	ch <- prometheus.MustNewConstMetric(d.transmitErrorsDesc, prometheus.GaugeValue, item.OutputErrors, l...)
+	ch <- prometheus.MustNewConstMetric(d.transmitDropsDesc, prometheus.GaugeValue, item.OutputDrops, l...)
+	ch <- prometheus.MustNewConstMetric(d.receiveBroadcastDesc, prometheus.GaugeValue, item.InputBroadcast, l...)
+	ch <- prometheus.MustNewConstMetric(d.receiveMulticastDesc, prometheus.GaugeValue, item.InputMulticast, l...)
+	ch <- prometheus.MustNewConstMetric(d.adminStatusDesc, prometheus.GaugeValue, float64(adminStatus), l...)
+	ch <- prometheus.MustNewConstMetric(d.operStatusDesc, prometheus.GaugeValue, float64(operStatus), l...)
+	ch <- prometheus.MustNewConstMetric(d.errorStatusDesc, prometheus.GaugeValue, float64(errorStatus), l...)
+	ch <- prometheus.MustNewConstMetric(d.speedDesc, prometheus.GaugeValue, item.Speed, l...)
 }

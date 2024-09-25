@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io"
 	"regexp"
 	"strings"
@@ -19,6 +20,33 @@ type Config struct {
 	KeyFile       string          `yaml:"key_file,omitempty"`
 	Devices       []*DeviceConfig `yaml:"devices,omitempty"`
 	Features      *FeatureConfig  `yaml:"features,omitempty"`
+	DynamicLabels bool            `yaml:"dynamic_labels,omitempty"`
+	IfDescRegStr  string          `yaml:"description_regex,omitempty"`
+	IfDescReg     *regexp.Regexp  `yaml:"-"`
+}
+
+func (c *Config) load(dynamicIfaceLabels bool) error {
+	if c.IfDescRegStr != "" && dynamicIfaceLabels {
+		re, err := regexp.Compile(c.IfDescRegStr)
+		if err != nil {
+			return fmt.Errorf("unable to compile interfce description regex %q: %w", c.IfDescRegStr, err)
+		}
+
+		c.IfDescReg = re
+	}
+
+	for _, d := range c.Devices {
+		if d.IfDescRegStr != "" && dynamicIfaceLabels {
+			re, err := regexp.Compile(d.IfDescRegStr)
+			if err != nil {
+				return fmt.Errorf("unable to compile interfce description regex %q: %w", d.IfDescRegStr, err)
+			}
+
+			d.IfDescReg = re
+		}
+	}
+
+	return nil
 }
 
 // DeviceConfig is the config representation of 1 device
@@ -31,6 +59,8 @@ type DeviceConfig struct {
 	Timeout       *int           `yaml:"timeout,omitempty"`
 	BatchSize     *int           `yaml:"batch_size,omitempty"`
 	Features      *FeatureConfig `yaml:"features,omitempty"`
+	IfDescRegStr  string         `yaml:"description_regex,omitempty"`
+	IfDescReg     *regexp.Regexp `yaml:"-"`
 	IsHostPattern bool           `yaml:"host_pattern,omitempty"`
 	HostPattern   *regexp.Regexp
 }
@@ -65,6 +95,11 @@ func Load(reader io.Reader) (*Config, error) {
 
 	c := New()
 	err = yaml.Unmarshal(b, c)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.load(c.DynamicLabels)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +146,7 @@ func (c *Config) setDefaultValues() {
 	c.LegacyCiphers = false
 	c.Timeout = 5
 	c.BatchSize = 10000
+	c.DynamicLabels = true
 
 	f := c.Features
 	bgp := true
@@ -125,7 +161,7 @@ func (c *Config) setDefaultValues() {
 	f.Neighbors = &neighbors
 	optics := true
 	f.Optics = &optics
-	inventory := true
+	inventory := false
 	f.Inventory = &inventory
 }
 
@@ -143,7 +179,7 @@ func (c *Config) DevicesFromTargets(sshHosts string) {
 
 // FeaturesForDevice gets the feature set configured for a device
 func (c *Config) FeaturesForDevice(host string) *FeatureConfig {
-	d := c.findDeviceConfig(host)
+	d := c.FindDeviceConfig(host)
 
 	if d != nil && d.Features != nil {
 		return d.Features
@@ -152,10 +188,16 @@ func (c *Config) FeaturesForDevice(host string) *FeatureConfig {
 	return c.Features
 }
 
-func (c *Config) findDeviceConfig(host string) *DeviceConfig {
+func (c *Config) FindDeviceConfig(host string) *DeviceConfig {
 	for _, dc := range c.Devices {
-		if dc.Host == host {
-			return dc
+		if dc.HostPattern != nil {
+			if dc.HostPattern.MatchString(host) {
+				return dc
+			}
+		} else {
+			if dc.Host == host {
+				return dc
+			}
 		}
 	}
 
