@@ -2,7 +2,6 @@ package config
 
 import (
 	"io"
-	"io/ioutil"
 	"regexp"
 	"strings"
 
@@ -59,7 +58,7 @@ func New() *Config {
 
 // Load loads a config from reader
 func Load(reader io.Reader) (*Config, error) {
-	b, err := ioutil.ReadAll(reader)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
