@@ -1,11 +1,14 @@
 package main
 
 import (
+	"regexp"
 	"time"
 
 	"sync"
 
+	"github.com/lwlcom/cisco_exporter/config"
 	"github.com/lwlcom/cisco_exporter/connector"
+	"github.com/lwlcom/cisco_exporter/dynamiclabels"
 	"github.com/lwlcom/cisco_exporter/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +38,24 @@ func newCiscoCollector(devices []*connector.Device) *ciscoCollector {
 		devices:    devices,
 		collectors: collectorsForDevices(devices, cfg),
 	}
+}
+
+func deviceInterfaceRegex(cfg *config.Config, host string) *regexp.Regexp {
+	if !cfg.DynamicLabels {
+		return nil
+	}
+
+	dc := cfg.FindDeviceConfig(host)
+
+	if dc.IfDescReg != nil {
+		return dc.IfDescReg
+	}
+
+	if cfg.IfDescReg != nil {
+		return cfg.IfDescReg
+	}
+
+	return dynamiclabels.DefaultInterfaceDescRegex()
 }
 
 // Describe implements prometheus.Collector interface
