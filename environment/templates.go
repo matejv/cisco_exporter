@@ -93,7 +93,7 @@ Start
  *
  */
 var templ_fan = `# show environment all
-Value Filldown NAME ((?:\w+\s?)+)
+Value NAME ((?:\w+\s?)+)
 Value LOCATION (\w+)
 Value STATUS ((?:\w+[\s\/]?)+)
 Value STATUS1 ((?:\w+[\s\/]?)+)
