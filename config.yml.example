@@ -25,3 +25,4 @@ features:
   facts: true
   interfaces: true
   optics: true
+  nat64: false
