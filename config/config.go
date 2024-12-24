@@ -71,6 +71,7 @@ type FeatureConfig struct {
 	Environment *bool `yaml:"environment,omitempty"`
 	Facts       *bool `yaml:"facts,omitempty"`
 	Interfaces  *bool `yaml:"interfaces,omitempty"`
+	Nat64       *bool `yaml:"nat64,omitempty"`
 	Neighbors   *bool `yaml:"neighbors,omitempty"`
 	Optics      *bool `yaml:"optics,omitempty"`
 	Inventory   *bool `yaml:"inventory,omitempty"`
@@ -127,6 +128,9 @@ func Load(reader io.Reader) (*Config, error) {
 		if d.Features.Interfaces == nil {
 			d.Features.Interfaces = c.Features.Interfaces
 		}
+		if d.Features.Nat64 == nil {
+			d.Features.Nat64 = c.Features.Nat64
+		}
 		if d.Features.Neighbors == nil {
 			d.Features.Neighbors = c.Features.Neighbors
 		}
@@ -157,6 +161,8 @@ func (c *Config) setDefaultValues() {
 	f.Facts = &facts
 	interfaces := true
 	f.Interfaces = &interfaces
+	nat64 := false
+	f.Nat64 = &nat64
 	neighbors := false
 	f.Neighbors = &neighbors
 	optics := true
